@@ -3,7 +3,7 @@ const ExcelJS = require('exceljs');
 
 module.exports = async (req, res) => {
   const workbook = new ExcelJS.Workbook()
-  const worksheet = await workbook.xlsx.readFile('otaAndEnrolmentSheet.xlsx')
+  const worksheet = await workbook.xlsx.readFile('../otaAndEnrolmentSheet.xlsx')
   const otaSheet = worksheet.getWorksheet('OTA')
   const attendanceSheet = worksheet.getWorksheet('attendance')
   console.log('attendanceSheet', attendanceSheet)
