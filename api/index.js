@@ -31,21 +31,23 @@ function parseTrainingDates(courseRecord) {
 
 module.exports = async (req, res) => {
   const { course_record, attendee_map_list } = JSON.parse(req.body.data)
-  // 39 fields
-  const facilitator = course_record.Facilitator_Name
-  const additionalNotes
+  console.log('1) Zoho object parsed into JS object');
+
+  // 39 fields from Zoho Course Record object
+  const facilitator = course_record.New_Facilitator_Name
+  const additionalNotes = course_record.Other_Notes
   // TODO - ask about this unsure about this one
   // const furtherNotes
   const organisation = course_record.Company.name
-  const keyDecisionMaker = KDM_Name
-  const pmAccountManager = Owner.name
-  const invoiceContactName = IC_Name
-  const invoicePhone = IC_Phone
-  const invoiceEmail = IC_Email
-  const trainingProgram = Product_Name
-  const version = Course_Version
-  const coaching = Coaching_Included
-  const deliveryMode = Course_Delivery
+  const keyDecisionMaker = course_record.KDM_Name
+  const pmAccountManager = course_record.Owner.name
+  const invoiceContactName = course_record.IC_Name
+  const invoicePhone = course_record.IC_Phone
+  const invoiceEmail = course_record.IC_Email
+  const trainingProgram = course_record.Product_Name
+  const version = course_record.Course_Version
+  const coaching = course_record.Coaching_Included
+  const deliveryMode = course_record.Course_Delivery
   const trainingDates = parseTrainingDates(course_record)
   const startTime = course_record.Start_Time
   const finishTime = course_record.Finish_Time
@@ -54,13 +56,12 @@ module.exports = async (req, res) => {
   const address = `${course_record.VD_Street_Address}, ${course_record.VD_Suburb}, ${course_record.VD_State}, ${course_record.VD_Postcode}`
   const venueContactPerson = course_record.VD_Name
   const venueMobileNo = course_record.VD_Phone
-  // TODO - Add VD_Office_Number
-  const venueOfficeNo = course_record.VD_Office_Number
+  const venueOfficeNo = course_record.VD_Office_Phone
   const pmEarlyAccess = course_record.PM_Early_Access
   const trainerAccessTime = course_record.Facilitator_Access_Time
   const parkingAvailable = course_record.Parking_Available
   const siteInductionOrPpe = course_record.Site_Induction_or_PPE_Required
-  const nameAndAddressReceiveTrainingMaterials = `${course_record.MD_Name}, ${course_record.MD_Address}, ${course_record.MD_Suburb}, ${course_record.MD_State}, ${course_record.MD_Postcode}`
+  const nameAndAddressReceiveTrainingMaterials = `${course_record.MD_Name}, ${course_record.MD_Street_Address}, ${course_record.MD_Suburb}, ${course_record.MD_State}, ${course_record.MD_Postcode}`
   const mailboxLimit = course_record.Note_for_Mailbox_Limit
   const existingArchivePolicy = course_record.Note_for_Existing_Archive_Policy
   const crmOrWmSystem = course_record.Note_for_CRM_or_Workload_Management_System
@@ -76,8 +77,11 @@ module.exports = async (req, res) => {
   const lunch = course_record.Lunch_Time
   const afternooTea = course_record.Afternoon_Tea_Time
   const trainingMaterialsProvided = course_record.Training_Resources_Provided_by_Priority_Management
-
-  const otaSheet = worksheet.getWorksheet('OTA')
+  // Read templated sheet
+  const facilitatorWb = new ExcelJS.Workbook()
+  const facilitatorWs = await facilitatorWb.xlsx.readFile(join(__dirname, '_files', 'otaAndEnrolmentSheet.xlsx'))
+  // Map Zoho fields to Spreadsheet
+  const otaSheet = facilitatorWs.getWorksheet('OTA')
   otaSheet.getCell('E4').value = facilitator
   otaSheet.getCell('E5').value = additionalNotes
   // otaSheet.getCell('D6').value = furtherNotes
@@ -94,36 +98,80 @@ module.exports = async (req, res) => {
   otaSheet.getCell('A17').value = trainingDates
   otaSheet.getCell('F17').value = startTime
   otaSheet.getCell('I17').value = finishTime
-  otaSheet.getCell('A20').value = trainingVenueAndRoom
+  // otaSheet.getCell('A20').value = trainingVenueAndRoom
   otaSheet.getCell('E20').value = address
   otaSheet.getCell('A22').value = venueContactPerson
   otaSheet.getCell('E22').value = venueMobileNo
   otaSheet.getCell('G22').value = venueOfficeNo
   otaSheet.getCell('H23').value = trainerAccessTime
-  otaSheet.getCell('A25').value = parkingAvailable
-  otaSheet.getCell('E25').value = siteInductionOrPpe
+  otaSheet.getCell('A25').value = parkingAvailable == true ? course_record.Special_Conditions_for_Parking : 'No'
+  otaSheet.getCell('E25').value = siteInductionOrPpe == true ? 'Yes' : 'No'
   otaSheet.getCell('A27').value = nameAndAddressReceiveTrainingMaterials
-  otaSheet.getCell('A30').value = course_record.Mailbox_Limit ? mailboxLimit : ''
-  otaSheet.getCell('E30').value = course_record.Existing_Archive_Policy ?existingArchivePolicy : ''
-  otaSheet.getCell('E32').value = course_record.CRM_or_Workload_Management_System ? crmOrWmSystem : ''
-  otaSheet.getCell('A32').value = mobileDevicesInUse == null ? 'No' : 'Yes'
+  otaSheet.getCell('A30').value = course_record.Mailbox_Limit ? mailboxLimit : 'No'
+  otaSheet.getCell('E30').value = course_record.Existing_Archive_Policy ?existingArchivePolicy : 'No'
+  otaSheet.getCell('E32').value = course_record.CRM_or_Workload_Management_System == true ? crmOrWmSystem : 'No'
+  otaSheet.getCell('A32').value = mobileDevicesInUse != null ? mobileDevicesInUse : 'No'
   otaSheet.getCell('A34').value = departmentBeingTrained
   otaSheet.getCell('A36').value = course_record.Course_Type == 'Custom' ? courseCustomisation : ''
   otaSheet.getCell('A39').value = computerSupplier
   otaSheet.getCell('I39').value = pmEarlyAccess
-  otaSheet.getCell('C40').value = dataProjector
-  otaSheet.getCell('E40').value = screen
-  otaSheet.getCell('H40').value = whiteboard
-  otaSheet.getCell('J40').value = flipchart
+  otaSheet.getCell('C40').value = dataProjector == true ? 'Yes' : 'No'
+  otaSheet.getCell('E40').value = screen == true ? 'Yes' : 'No'
+  otaSheet.getCell('H40').value = whiteboard == true ? 'Yes' : 'No'
+  otaSheet.getCell('J40').value = flipchart == true ? 'Yes' : 'No'
   otaSheet.getCell('B42').value = morningTea
   otaSheet.getCell('F42').value = lunch
   otaSheet.getCell('I42').value = afternooTea
-  otaSheet.getCell('F43').value = trainingMaterialsProvided
+  otaSheet.getCell('F43').value = trainingMaterialsProvided.join(', ')
+  console.log('2) Added Zoho Course OTA to spreadsheet');
 
-  test.xlsx.writeFile('testing.xlsx')
-  const workbook = new ExcelJS.Workbook()
-  const worksheet = await workbook.xlsx.readFile(join(__dirname, '_files', 'otaAndEnrolmentSheet.xlsx'))
+  const attendanceSheet = facilitatorWs.getWorksheet('attendance')
+  const START_OF_ATTENDANTS_LIST = 4
+  otaSheet.getCell('C1').value = trainingProgram
+  const startDateOfCourse = toDateString(course_record.Date_of_Training)
+  otaSheet.getCell('C2').value = startDateOfCourse
+  attendee_map_list.forEach((attendeeDetails, index) => {
+    console.log(`3)a) Adding ${attendeeDetails}`);
+    attendanceSheet.getCell(`A${index + START_OF_ATTENDANTS_LIST}`).value = index
+    attendanceSheet.getCell(`B${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.firstName
+    attendanceSheet.getCell(`C${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.lastName
+    attendanceSheet.getCell(`D${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.jobTitle
+    attendanceSheet.getCell(`E${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.emailAddress
+  })
+  console.log('3)b) Added attendee details to attendanceSheet');
 
-  const attendanceSheet = worksheet.getWorksheet('attendance')
-  res.json({body: 'This was a success!'})
+  try {
+    //* 4) Create buffer
+    const buffer = await facilitatorWb.xlsx.writeBuffer()
+    //* 5) Create reusable transporter object using the default SMTP transport
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.zoho.com',
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      auth: {
+        user: 'brett.handley@prioritymanagement.com.au',
+        pass: process.env.EMAIL_PW,
+      },
+    })
+
+    //* 6) Send mail with defined transport object
+    const emailRes = await transporter.sendMail({
+      from: `'Priority Management Sydney' <brett.handley@prioritymanagement.com.au>`,
+      to: 'johncodeinaire@gmail.com',
+      subject: `Spreadsheet for facilitator - ${facilitator}`,
+      text: `Dear PM Admin,/r This is the Facilitator spreadsheet for the course ${trainingProgram} held by ${facilitator} and starting on ${startDateOfCourse}/r Regards,`,
+      html: `<p>Dear PM Admin,</p><p>This is the Facilitator spreadsheet for the course ${trainingProgram} held by ${facilitator} and starting on ${startDateOfCourse}</p><p>Regards,</p>`,
+      attachments: [
+        {
+          filename: `${course_record.Date_of_Training}-${trainingProgram}.xlsx`,
+          content: buffer
+        }
+      ]
+    })
+    console.log('Message sent:', emailRes.messageId)
+    res.json({body: `Message sent: ${emailRes.messageId}`})
+  } catch (error) {
+    console.error('Error:', error)
+    res.json({body: `Error: ${error}`})
+  }
 }
