@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
   const facilitator = course_record.New_Facilitator_Name
   const additionalNotes = course_record.Other_Notes
   // TODO - ask about this unsure about this one
-  // const furtherNotes
+  // const Any furtherNotes
   const organisation = course_record.Company.name
   const keyDecisionMaker = course_record.KDM_Name
   const pmAccountManager = course_record.Owner.name
@@ -73,6 +73,7 @@ module.exports = async (req, res) => {
   const screen = course_record.Laptop_Connectable_Monitor_or_TV_Available
   const whiteboard = course_record.Whiteboard_Available
   const flipchart = course_record.Flipchart_Available
+  const cateringProvided = course_record.Catering_Provided
   const morningTea = course_record.Morning_Tea_Time
   const lunch = course_record.Lunch_Time
   const afternooTea = course_record.Afternoon_Tea_Time
@@ -84,7 +85,7 @@ module.exports = async (req, res) => {
   const otaSheet = facilitatorWs.getWorksheet('OTA')
   otaSheet.getCell('E4').value = facilitator
   otaSheet.getCell('E5').value = additionalNotes
-  // otaSheet.getCell('D6').value = furtherNotes
+  // otaSheet.getCell('D6').value = anyfurtherNotes
   otaSheet.getCell('A9').value = organisation
   otaSheet.getCell('E9').value = keyDecisionMaker
   otaSheet.getCell('E10').value = pmAccountManager
@@ -119,6 +120,7 @@ module.exports = async (req, res) => {
   otaSheet.getCell('E40').value = screen == true ? 'Yes' : 'No'
   otaSheet.getCell('H40').value = whiteboard == true ? 'Yes' : 'No'
   otaSheet.getCell('J40').value = flipchart == true ? 'Yes' : 'No'
+  otaSheet.getCell('J41').value = cateringProvided == true ? 'Yes' : 'No'
   otaSheet.getCell('B42').value = morningTea
   otaSheet.getCell('F42').value = lunch
   otaSheet.getCell('I42').value = afternooTea
@@ -127,12 +129,12 @@ module.exports = async (req, res) => {
 
   const attendanceSheet = facilitatorWs.getWorksheet('attendance')
   const START_OF_ATTENDANTS_LIST = 4
-  otaSheet.getCell('C1').value = trainingProgram
+  attendanceSheet.getCell('C1').value = trainingProgram
   const startDateOfCourse = toDateString(course_record.Date_of_Training)
-  otaSheet.getCell('C2').value = startDateOfCourse
+  attendanceSheet.getCell('C2').value = startDateOfCourse
   attendee_map_list.forEach((attendeeDetails, index) => {
     console.log(`3)a) Adding ${attendeeDetails}`);
-    attendanceSheet.getCell(`A${index + START_OF_ATTENDANTS_LIST}`).value = index
+    attendanceSheet.getCell(`A${index + START_OF_ATTENDANTS_LIST}`).value = index + 1
     attendanceSheet.getCell(`B${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.firstName
     attendanceSheet.getCell(`C${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.lastName
     attendanceSheet.getCell(`D${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.jobTitle
