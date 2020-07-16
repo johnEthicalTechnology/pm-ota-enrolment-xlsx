@@ -158,7 +158,7 @@ module.exports = async (req, res) => {
     //* 6) Send mail with defined transport object
     const emailRes = await transporter.sendMail({
       from: `'Priority Management Sydney' <brett.handley@prioritymanagement.com.au>`,
-      to: 'johncodeinaire@gmail.com',
+      to: 'materials@prioritymanagement.com.au',
       subject: `Spreadsheet for facilitator - ${facilitator}`,
       text: `Dear PM Admin,/r This is the Facilitator spreadsheet for the course ${trainingProgram} held by ${facilitator} and starting on ${startDateOfCourse}/r Regards,`,
       html: `<p>Dear PM Admin,</p><p>This is the Facilitator spreadsheet for the course ${trainingProgram} held by ${facilitator} and starting on ${startDateOfCourse}</p><p>Regards,</p>`,
