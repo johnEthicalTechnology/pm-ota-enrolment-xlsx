@@ -2,31 +2,76 @@ const nodemailer = require('nodemailer')
 const ExcelJS = require('exceljs')
 const { join } = require('path')
 
+const dayOfWeekObject = {
+  0: 'Sun',
+  1: 'Mon',
+  2: 'Tue',
+  3: 'Wed',
+  4: 'Thu',
+  5: 'Fri',
+  6: 'Sat'
+}
+
 function toDateString(dayOfTrainingDate) {
   const dateSplit = dayOfTrainingDate.split('-')
-  const dateString = new Date(dateSplit[0], dateSplit[1], dateSplit[2]).toDateString()
+  const dateString = new Date(dateSplit[0], dateSplit[1] - 1, dateSplit[2]).toDateString()
   return dateString
 }
 
-function parseTrainingDates(courseRecord) {
+function parseTrainingDatesAndTimes(courseRecord) {
   const daysOfTraining = courseRecord.Days_of_Training
   let trainingDates
+  let trainingStartTimes
+  let trainingFinTimes
+  let dayOfWeek
   if(daysOfTraining >= 1) {
-    trainingDates = toDateString(courseRecord.Date_of_Training)
+    if(daysOfTraining == 1) {
+      trainingDates = toDateString(courseRecord.Date_of_Training)
+    } else {
+      dayOfWeek = new Date(courseRecord.Date_of_Training).getDay()
+      trainingDates = `${dayOfWeekObject[dayOfWeek]} ${new Date(courseRecord.Date_of_Training).getDate()}`
+    }
+    trainingStartTimes = `Day 1: ${courseRecord.Start_Time}\r\n`
+    trainingFinTimes = `Day 1: ${courseRecord.Finish_Time}\r\n`
   }
   if(daysOfTraining >= 2) {
-    trainingDates += `, ${toDateString(courseRecord.Day_Two_Date)}`
+    if(daysOfTraining == 2) {
+      trainingDates += ` & ${toDateString(courseRecord.Day_Two_Date)}`
+    } else {
+      dayOfWeek = new Date(courseRecord.Day_Two_Date).getDay()
+      trainingDates += `, ${dayOfWeekObject[dayOfWeek]} ${new Date(courseRecord.Day_Two_Date).getDate()}`
+    }
+    trainingStartTimes += `Day 2: ${courseRecord.Day_Two_Start_Time}\r\n`
+    trainingFinTimes += `Day 2: ${courseRecord.Day_Two_Finish_Time}\r\n`
   }
   if(daysOfTraining >= 3) {
-    trainingDates += `, ${toDateString(courseRecord.Day_Three_Date)}`
+    if(daysOfTraining == 3) {
+      trainingDates += ` & ${toDateString(courseRecord.Day_Three_Date)}`
+    } else {
+      dayOfWeek = new Date(courseRecord.Day_Three_Date).getDay()
+      trainingDates += `, ${dayOfWeekObject[dayOfWeek]} ${new Date(courseRecord.Day_Three_Date).getDate()}`
+    }
+    trainingStartTimes += `Day 3: ${courseRecord.Day_Three_Start_Time}\r\n`
+    trainingFinTimes += `Day 3: ${courseRecord.Day_Three_Finish_Time}\r\n`
   }
   if(daysOfTraining >= 4) {
-    trainingDates += `, ${toDateString(courseRecord.Day_Four_Date)}`
+    if(daysOfTraining == 4) {
+      trainingDates += ` & ${toDateString(courseRecord.Day_Four_Date)}`
+    } else {
+      dayOfWeek = new Date(courseRecord.Day_Four_Date).getDay()
+      trainingDates += `, ${dayOfWeekObject[dayOfWeek]} ${new Date(courseRecord.Day_Four_Date).getDate()}`
+    }
+    trainingStartTimes += `Day 4: ${courseRecord.Day_Four_Start_Time}\r\n`
+    trainingFinTimes += `Day 4: ${courseRecord.Day_Four_Finish_Time}\r\n`
   }
   if(daysOfTraining >= 5) {
-    trainingDates += `, ${toDateString(courseRecord.Day_Five_Date)}`
+    if(daysOfTraining == 5) {
+      trainingDates += ` & ${toDateString(courseRecord.Day_Four_Date)}`
+    }
+    trainingStartTimes += `Day 5: ${courseRecord.Day_Five_Start_Time}\r\n`
+    trainingFinTimes += `Day 5: ${courseRecord.Day_Five_Finish_Time}\r\n`
   }
-  return trainingDates
+  return { trainingDates, trainingStartTimes, trainingFinTimes }
 }
 
 module.exports = async (req, res) => {
@@ -47,9 +92,7 @@ module.exports = async (req, res) => {
   const version = course_record.Course_Version
   const coaching = course_record.Coaching_Included
   const deliveryMode = course_record.Course_Delivery
-  const trainingDates = parseTrainingDates(course_record)
-  const startTime = course_record.Start_Time
-  const finishTime = course_record.Finish_Time
+  const { trainingDates, trainingStartTimes, trainingFinTimes } = parseTrainingDatesAndTimes(course_record)
   // TODO - Ask Mario - Need to add trainingVenueAndRoom fields to Zoho OTA
   // const trainingVenueAndRoom = course_record
   const address = `${course_record.VD_Street_Address}, ${course_record.VD_Suburb}, ${course_record.VD_State}, ${course_record.VD_Postcode}`
@@ -96,8 +139,8 @@ module.exports = async (req, res) => {
   otaSheet.getCell('G14').value = coaching
   otaSheet.getCell('I14').value = deliveryMode
   otaSheet.getCell('A17').value = trainingDates
-  otaSheet.getCell('F17').value = startTime
-  otaSheet.getCell('I17').value = finishTime
+  otaSheet.getCell('F17').value = trainingStartTimes
+  otaSheet.getCell('I17').value = trainingFinTimes
   otaSheet.getCell('A19').value = course_record.Course_Type == 'Custom' ? courseCustomisation : ''
   // otaSheet.getCell('A22').value = trainingVenueAndRoom
   otaSheet.getCell('E24').value = address
