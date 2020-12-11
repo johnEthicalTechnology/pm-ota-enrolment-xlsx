@@ -77,6 +77,8 @@ function parseTrainingDatesAndTimes(courseRecord) {
 module.exports = async (req, res) => {
   const { course_record, attendee_map_list } = JSON.parse(req.body.data)
   console.log('1) Zoho object parsed into JS object');
+  console.log('Course record', course_record);
+  console.log('Attendee map list', attendee_map_list);
 
   // 39 fields from Zoho Course Record object
   const facilitator = course_record.New_Facilitator_Name
@@ -101,13 +103,10 @@ module.exports = async (req, res) => {
   const venueOfficeNo = course_record.VD_Office_Phone
   const pmEarlyAccess = course_record.PM_Early_Access
   const trainerAccessTime = course_record.Facilitator_Access_Time
-  const parkingAvailable = course_record.Parking_Available
+  const parkingAvailable = course_record.Parking_Available_1
+  const parkingDetails = course_record.Special_Conditions_for_Parking != null ? course_record.Special_Conditions_for_Parking : ''
   const siteInductionOrPpe = course_record.Site_Induction_or_PPE_Required
   const nameAndAddressReceiveTrainingMaterials = `${course_record.MD_Name}, ${course_record.MD_Street_Address}, ${course_record.MD_Suburb}, ${course_record.MD_State}, ${course_record.MD_Postcode}`
-  const mailboxLimit = course_record.Note_for_Mailbox_Limit
-  const existingArchivePolicy = course_record.Note_for_Existing_Archive_Policy
-  const crmOrWmSystem = course_record.Note_for_CRM_or_Workload_Management_System
-  const mobileDevicesInUse = course_record.Mobile_Devices_in_Use
   const departmentBeingTrained = course_record.Department_Being_Trained
   const courseCustomisation = course_record.Type_of_Course_Customisation
   const computerSupplier = course_record.Computer_Supplier
@@ -125,9 +124,11 @@ module.exports = async (req, res) => {
   const facilitatorWs = await facilitatorWb.xlsx.readFile(join(__dirname, '_files', 'otaAndEnrolmentSheet.xlsx'))
   // Map Zoho fields to Spreadsheet
   const otaSheet = facilitatorWs.getWorksheet('OTA')
+  // Important things to note about this course
   otaSheet.getCell('E4').value = facilitator
   otaSheet.getCell('E5').value = additionalNotes
   otaSheet.getCell('D6').value = anyFurtherNotes
+  // WORKSHOP DETAILS
   otaSheet.getCell('A9').value = organisation
   otaSheet.getCell('E9').value = keyDecisionMaker
   otaSheet.getCell('E10').value = pmAccountManager
@@ -142,31 +143,30 @@ module.exports = async (req, res) => {
   otaSheet.getCell('F17').value = trainingStartTimes
   otaSheet.getCell('I17').value = trainingFinTimes
   otaSheet.getCell('A19').value = course_record.Course_Type == 'Custom' ? courseCustomisation : ''
+  // VENUE DETAILS
   // otaSheet.getCell('A22').value = trainingVenueAndRoom
-  otaSheet.getCell('E24').value = address
+  otaSheet.getCell('E22').value = address
   otaSheet.getCell('A24').value = venueContactPerson
   otaSheet.getCell('E24').value = venueMobileNo
   otaSheet.getCell('G24').value = venueOfficeNo
   otaSheet.getCell('H25').value = trainerAccessTime
-  otaSheet.getCell('A27').value = parkingAvailable == true ? course_record.Special_Conditions_for_Parking : 'No'
-  otaSheet.getCell('E27').value = siteInductionOrPpe == true ? 'Yes' : 'No'
+  otaSheet.getCell('A27').value = parkingAvailable == 'Yes' ? `Yes, ${parkingDetails}` : 'No'
+  otaSheet.getCell('E27').value = siteInductionOrPpe == 'Yes' ? 'Yes' : 'No'
   otaSheet.getCell('A29').value = nameAndAddressReceiveTrainingMaterials
-  otaSheet.getCell('A32').value = course_record.Mailbox_Limit ? mailboxLimit : 'No'
-  otaSheet.getCell('E32').value = course_record.Existing_Archive_Policy ?existingArchivePolicy : 'No'
-  otaSheet.getCell('E34').value = course_record.CRM_or_Workload_Management_System == true ? crmOrWmSystem : 'No'
-  otaSheet.getCell('A34').value = mobileDevicesInUse != null ? mobileDevicesInUse : 'No'
-  otaSheet.getCell('A36').value = departmentBeingTrained
-  otaSheet.getCell('A41').value = computerSupplier
-  otaSheet.getCell('I41').value = pmEarlyAccess
-  otaSheet.getCell('C42').value = dataProjector == true ? 'Yes' : 'No'
-  otaSheet.getCell('E42').value = screen == true ? 'Yes' : 'No'
-  otaSheet.getCell('H42').value = whiteboard == true ? 'Yes' : 'No'
-  otaSheet.getCell('J42').value = flipchart == true ? 'Yes' : 'No'
-  otaSheet.getCell('J43').value = cateringProvided == true ? 'Yes' : 'No'
-  otaSheet.getCell('B44').value = morningTea
-  otaSheet.getCell('F44').value = lunch
-  otaSheet.getCell('I44').value = afternooTea
-  otaSheet.getCell('F45').value = trainingMaterialsProvided.join(', ')
+  // TRAINING SESSION DETAILS
+  otaSheet.getCell('A32').value = departmentBeingTrained
+  // TRAINING RESOURCES
+  otaSheet.getCell('A35').value = computerSupplier
+  otaSheet.getCell('I35').value = pmEarlyAccess
+  otaSheet.getCell('C36').value = dataProjector == 'Yes' ? 'Yes' : 'No'
+  otaSheet.getCell('E36').value = screen == 'Yes' ? 'Yes' : 'No'
+  otaSheet.getCell('H36').value = whiteboard == 'Yes' ? 'Yes' : 'No'
+  otaSheet.getCell('J36').value = flipchart == 'Yes' ? 'Yes' : 'No'
+  otaSheet.getCell('J37').value = cateringProvided == 'Yes' ? 'Yes' : 'No'
+  otaSheet.getCell('B38').value = morningTea
+  otaSheet.getCell('F38').value = lunch
+  otaSheet.getCell('I38').value = afternooTea
+  otaSheet.getCell('F39').value = trainingMaterialsProvided.join(', ')
   console.log('2) Added Zoho Course OTA to spreadsheet');
 
   const attendanceSheet = facilitatorWs.getWorksheet('attendance')
@@ -175,7 +175,7 @@ module.exports = async (req, res) => {
   const startDateOfCourse = toDateString(course_record.Date_of_Training)
   attendanceSheet.getCell('C2').value = startDateOfCourse
   attendee_map_list.forEach((attendeeDetails, index) => {
-    console.log(`3)a) Adding ${attendeeDetails}`);
+    console.log(`3)a) Adding ${attendeeDetails.firstName}`);
     attendanceSheet.getCell(`A${index + START_OF_ATTENDANTS_LIST}`).value = index + 1
     attendanceSheet.getCell(`B${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.firstName
     attendanceSheet.getCell(`C${index + START_OF_ATTENDANTS_LIST}`).value = attendeeDetails.lastName
